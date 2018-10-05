@@ -28,11 +28,17 @@ import com.synopsys.arc.jenkins.plugins.ownership.Messages;
 import com.synopsys.arc.jenkins.plugins.ownership.OwnershipDescription;
 import com.synopsys.arc.jenkins.plugins.ownership.extensions.ItemOwnershipPolicy;
 import com.synopsys.arc.jenkins.plugins.ownership.extensions.ItemOwnershipPolicyDescriptor;
+import com.synopsys.arc.jenkins.plugins.ownership.util.AbstractOwnershipHelper;
 import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.User;
+import org.jenkinsci.plugins.ownership.model.OwnershipHelperLocator;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.multibranch.WorkflowMultiBranchProject;
 import org.kohsuke.stapler.DataBoundConstructor;
+import java.util.Set;
+import java.util.HashSet;
 
 /**
  * A policy, which sets the item creator as an owner.
@@ -47,12 +53,34 @@ public class AssignCreatorPolicy extends ItemOwnershipPolicy {
 
     @Override
     public OwnershipDescription onCreated(Item item) {
-        User creator = User.current();
-        if (creator != null && creator != User.getUnknown()) {
-            return new OwnershipDescription(true, creator.getId(), null);
+
+        AbstractOwnershipHelper<Item> helper = OwnershipHelperLocator.locate(item);
+
+        if (helper == null) {
+            return null;
         }
-        
-        return null;
+
+        if (item.getClass() == WorkflowJob.class && item.getParent().getClass() == WorkflowMultiBranchProject.class) {
+            return helper.getOwnershipDescription(item);
+        }
+        else {
+
+            User creator = User.current();
+            Set<String> secondaryOwners = new HashSet<>();
+            OwnershipDescription description = helper.getOwnershipDescription(item);
+
+            if (creator == null || creator == User.getUnknown()) {
+                return helper.getOwnershipDescription(item);
+            }
+
+            secondaryOwners = (description.getSecondaryOwnerIds());
+            if (!description.getPrimaryOwnerId().equals(creator.getId()) &&
+                    !description.getPrimaryOwnerId().equals(User.getUnknown().getId())) {
+                secondaryOwners.add(description.getPrimaryOwnerId());
+            }
+
+            return new OwnershipDescription(true, creator.getId(), secondaryOwners);
+        }
     }
     
     @Extension
