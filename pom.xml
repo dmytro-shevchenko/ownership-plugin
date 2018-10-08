@@ -8,7 +8,7 @@
     
     <groupId>com.synopsys.jenkinsci</groupId>
     <artifactId>ownership</artifactId>
-    <version>0.12.2-SNAPSHOT</version>
+    <version>0.11.1-NIBR</version>
     <name>Job and Node ownership plugin</name>
     <packaging>hpi</packaging>
     <description>Provides explicit ownership of jobs and nodes</description>
